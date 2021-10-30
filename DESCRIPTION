@@ -1,0 +1,28 @@
+Package: branchMover
+Title: An RStudio Addin to Help Move the Default Branch of Your GitHub Repos
+Version: 0.0.0.9000
+Authors@R: 
+    person("Garrick", "Aden-Buie", , "garrick@adenbuie.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7111-0077"))
+Description: What the package does (one paragraph).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Imports: 
+    bslib,
+    checkmate,
+    cli,
+    dplyr,
+    forcats,
+    gert,
+    gh,
+    glue,
+    jsonlite,
+    magrittr,
+    purrr,
+    reactable,
+    rlang,
+    shiny,
+    usethis (>= 2.1.2),
+    withr
