@@ -1,8 +1,8 @@
-gh_user_repos <- function(user = NULL, include_fork = TRUE, include_private = TRUE) {
-  checkmate::assert_character(user, max.len = 1, null.ok = TRUE)
-  user <- user %||% gh::gh_whoami()[["login"]]
+gh_user_repos <- function(username = NULL, include_fork = TRUE, include_private = TRUE) {
+  checkmate::assert_character(username, max.len = 1, null.ok = TRUE)
+  username <- username %||% gh::gh_whoami()[["login"]]
 
-  user <- gh::gh("/user") %>%
+  user <- gh::gh("/users/{username}", username = username) %>%
     ui_report_total_user_repos()
 
   repos <- gh::gh("/user/repos", .limit = Inf, type = "owner")
@@ -19,14 +19,40 @@ gh_user_repos <- function(user = NULL, include_fork = TRUE, include_private = TR
     url_ssh = "ssh_url"
   )
 
-  repos %>%
+  repos_df <-
+    repos %>%
     purrr::map_dfr(`[`, repo_fields) %>%
     dplyr::mutate(.repo = repos) %>%
     dplyr::rename(!!!repo_fields) %>%
     filter_rows_if(!include_fork, !.data$is_fork) %>%
     filter_rows_if(!include_private, !.data$is_private) %>%
-    dplyr::arrange(dplyr::desc(.data$count_stargazers)) %>%
+    dplyr::arrange(dplyr::desc(.data$count_stargazers))
+
+  issues <- gh_find_branch_mover_issues(username)
+  if (!is.null(issues)) {
+    repos_df <- dplyr::left_join(repos_df, issues, by = "full_name")
+  }
+
+  repos_df %>%
     ui_report_default_branch_count()
+}
+
+gh_find_branch_mover_issues <- function(username) {
+  issues <- gh::gh("/search/issues", q = glue::glue("91e77a361e4e user:{username}"))
+  if (!length(issues$items)) {
+    return(NULL)
+  }
+
+  issues$items %>%
+    purrr::map_dfr(`[`, c("url", "html_url", "number", "state", "created_at")) %>%
+    dplyr::mutate(
+      full_name = sub("https://.+/repos/", "", .data$url),
+      full_name = sub("/issues/.+$", "", .data$full_name)
+    ) %>%
+    dplyr::group_by(.data$full_name) %>%
+    dplyr::slice_max(.data$created_at, n = 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(.data$full_name, issue = .data$number, .data$state, .data$created_at, issue_url = .data$html_url)
 }
 
 get_repos <- memoise::memoise(gh_user_repos, cache = memoise::cache_filesystem(tempdir()))

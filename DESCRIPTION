@@ -20,6 +20,7 @@ Imports:
     glue,
     jsonlite,
     magrittr,
+    memoise,
     purrr,
     reactable,
     rlang,

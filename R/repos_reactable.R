@@ -1,16 +1,18 @@
-repos_reactable <- function(repos_df, include_buttons = TRUE) {
+add_buttons <- function(repos_df) {
+  if ("button" %in% names(repos_df)) {
+    return(repos_df)
+  }
+
+  repos_df$button <- repos_df$full_name
+  repos_df[repos_df$default_branch == "main", "button"] <- ""
+  repos_df
+}
+
+repos_reactable <- function(repos_df, include_buttons = FALSE) {
   repos_df[[".repo"]] <- NULL
 
-  if (include_buttons) {
-    repos_df$button <- glue::glue(
-      '<button data-repo="{repo}" type="button" class="btn btn-primary btn-sm js-change-branch">Change Default Branch</button>',
-      repo = repos_df$full_name
-    )
-    repos_df$issue <- glue::glue(
-      '<span class="js-issue-link" data-repo="{repo}"></span>',
-      repo = repos_df$full_name
-    )
-    repos_df[repos_df$default_branch == "main", "button"] <- ""
+  if (isTRUE(include_buttons)) {
+    repos_df <- add_buttons(repos_df)
   }
 
   reactable(
@@ -56,8 +58,25 @@ repos_reactable <- function(repos_df, include_buttons = TRUE) {
       count_stargazers = colDef("Stars", filterable = FALSE),
       url_html = colDef(show = FALSE),
       url_ssh = colDef(show = FALSE),
-      button = colDef(name = "", html = TRUE, filterable = FALSE, minWidth = 120),
-      issue = colDef(name = "Issue", html = TRUE, filterable = FALSE)
+      button = colDef(
+        name = "", html = TRUE, filterable = FALSE, minWidth = 120,
+        cell = reactable::JS('function(cellInfo) {
+          return cellInfo.value
+            ? `<button data-repo="${cellInfo.value}" type="button" class="btn btn-primary btn-sm js-change-branch">Change Default Branch</button>`
+            : ""
+        }')
+      ),
+      issue = colDef(
+        name = "Issue", html = TRUE, filterable = FALSE,
+        cell = reactable::JS('function(cellInfo) {
+          return cellInfo.value
+            ? `<a href="${cellInfo.row.issue_url}">#${cellInfo.value}</a>`
+            : ""
+        }')
+      ),
+      state = colDef(show = FALSE),
+      created_at = colDef(show = FALSE),
+      issue_url = colDef(show = FALSE)
     )
   )
 }

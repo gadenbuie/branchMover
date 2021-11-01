@@ -60,14 +60,6 @@ ui <- function(req) {
 
           Shiny.addCustomMessageHandler('set_change_branch_state', function(x) {
             x === 'disable' ? disableAllChangeButtons() : enableAllChangeButtons()
-          })
-
-          Shiny.addCustomMessageHandler('set_issue_url', function({repo, url, number}) {
-            const el = document.querySelector(`.js-issue-link[data-repo=\"${repo}\"]`)
-            const link = document.createElement('a')
-            link.href = url
-            link.innerText = `#${number}`
-            el.appendChild(link)
           })"
         ))
       )
@@ -140,14 +132,18 @@ ui <- function(req) {
 
 server <- function(repos) {
   function(input, output, session) {
-    output$repos <- reactable::renderReactable(repos_reactable(repos))
+    repo_ex <- repos[1, ]
+
+    repos <- shiny::reactiveVal(repos)
+
+    output$repos <- reactable::renderReactable(repos_reactable(repos(), include_buttons = TRUE))
 
     output$issue_preview <- shiny::renderUI({
       html <- commonmark::markdown_html(
         glue::glue(
           input$issue_markdown,
-          repo = repos$full_name[[1]],
-          old_default = repos$default_branch[[1]],
+          repo = repo_ex$full_name[[1]],
+          old_default = repo_ex$default_branch[[1]],
           new_default = input$new_default
         )
       )
@@ -161,8 +157,8 @@ server <- function(repos) {
       html <- commonmark::markdown_html(
         glue::glue(
           input$issue_close_markdown,
-          repo = repos$full_name[[1]],
-          old_default = repos$default_branch[[1]],
+          repo = repo_ex$full_name[[1]],
+          old_default = repo_ex$default_branch[[1]],
           new_default = input$new_default
         )
       )
@@ -172,18 +168,50 @@ server <- function(repos) {
       )
     })
 
-    observeEvent(input$change_branch, {
+    rv_update <- shiny::reactiveVal(NULL)
+
+    shiny::observeEvent(input$change_branch, {
       session$sendCustomMessage("set_change_branch_state", "disable")
       cli::cli_process_start("Changing branch of repo: {input$change_branch}")
-      Sys.sleep(runif(1, 0, 10))
-      cli::cli_process_done()
-      issue_number <- floor(runif(1, 1, 100))
-      session$sendCustomMessage("set_change_branch_state", "enable")
-      session$sendCustomMessage("set_issue_url", list(
+      Sys.sleep(runif(1, 0, 3))
+      # mock issue number
+      issue <- list(
+        number = floor(runif(1, 1, 100)),
+        html_url = "https://github.com/gadenbuie/shinyThings/issues/5",
+        state = "closed",
+        created_at = paste(Sys.time())
+      )
+      res <- list(
+        success = TRUE,
+        branch = input$new_default,
         repo = input$change_branch,
-        url = "https://github.com/gadenbuie/shinyThings/issues/5",
-        number = issue_number
-      ))
+        issue = issue
+      )
+      cli::cli_process_done()
+      session$sendCustomMessage("set_change_branch_state", "enable")
+      rv_update(res)
+    })
+
+    shiny::observe({
+      res <- rv_update()
+      shiny::req(res)
+
+      repos <- isolate(repos())
+
+      issue <- res$issue[c("number", "html_url", "state", "created_at")]
+      names(issue) <- c("issue", "issue_url", "state", "created_at")
+      for (field in names(issue)) {
+        repos[repos$full_name == res$repo, field] <- issue[[field]]
+      }
+
+      if (res$success) {
+        repos[repos$full_name == res$repo, "default_branch"] <- res$branch
+      }
+
+      repos(repos)
+      rct_state <- reactable::getReactableState("repos")
+      str(rct_state)
+      reactable::updateReactable("repos", repos, page = rct_state$page)
     })
   }
 }

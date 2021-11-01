@@ -29,9 +29,11 @@ move_default_branch <- function(
       body = jsonlite::unbox(
         glue::glue(
           issue_body,
+          "\n\n<sup>ID: 91e77a361e4e</sup>",
           repo = repo,
           old_default = r$default_branch,
-          new_default = new_default
+          new_default = new_default,
+          .trim = FALSE
         )
       )
     )
@@ -70,6 +72,7 @@ move_default_branch <- function(
         number = issue$number,
         state = jsonlite::unbox("closed")
       )
+      issue$state <- "closed"
       cli_alert_success("Moved to branch {.field main} and closed issue #{issue$number}")
       success <- TRUE
     }, error = function(e) {
