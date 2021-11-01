@@ -39,17 +39,13 @@ repos_reactable <- function(repos_df, include_buttons = FALSE) {
         name = "Default Branch",
         html = TRUE,
         align = "center",
-        cell = function(value) {
-          glue::glue(
-            '<span class="{color}">{value}</span>',
-            color = switch(
-              value,
-              master = "badge bg-danger",
-              main = "badge bg-success",
-              "badge bg-light"
-            )
-          )
-        }
+        cell = reactable::JS('function(cellInfo) {
+          const desiredClass = window.branchMoverNewDefaultBranch || "main"
+          let badgeClass = "badge bg-light"
+          badgeClass = cellInfo.value === "master" ? "badge bg-danger" : badgeClass
+          badgeClass = cellInfo.value === desiredClass ? "badge bg-success" : badgeClass
+          return `<span class="${badgeClass}">${cellInfo.value}</span>`
+        }')
       ),
       language = colDef(name = "Language"),
       is_fork = colDef(show = FALSE),
@@ -61,9 +57,9 @@ repos_reactable <- function(repos_df, include_buttons = FALSE) {
       button = colDef(
         name = "", html = TRUE, filterable = FALSE, minWidth = 120,
         cell = reactable::JS('function(cellInfo) {
-          return cellInfo.value
-            ? `<button data-repo="${cellInfo.value}" type="button" class="btn btn-primary btn-sm js-change-branch">Change Default Branch</button>`
-            : ""
+          return cellInfo.row.default_branch === (window.branchMoverNewDefaultBranch || "main")
+            ? ""
+            : `<button data-repo="${cellInfo.row.full_name}" type="button" class="btn btn-primary btn-sm js-change-branch">Change Default Branch</button>`
         }')
       ),
       issue = colDef(

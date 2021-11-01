@@ -11,12 +11,18 @@ move_default_branch <- function(
 
   if (identical(r$default_branch, new_default)) {
     cli::cli_alert_success("The default branch for {.field {repo}} is already {.value {new_default}}")
-    return(list(success = TRUE))
+    return(list(success = TRUE, repo = r, branch = r$default_branch))
   }
 
-  if (!is.null(issue_number)) {
+  if (r$archived || r$disabled) {
+    cli::cli_alert_info("{.field {repo}} is archived or disabled, cannot change default branch")
+    return(list(success = FALSE, repo = r, branch = r$default_branch))
+  }
+
+  if (!shiny::isTruthy(issue_number)) {
     issue <- gh::gh("/repos/{repo}/issues/{number}", repo = repo, number = issue_number)
-  } else {
+    cli_alert_info("{.url {issue$html_url}}")
+  } else if (r$has_issues) {
     issue_body <- issue_body %||% pkg_read_lines("templates", "issue-body.md")
     issue <- gh::gh(
       "POST /repos/{repo}/issues",
@@ -38,8 +44,11 @@ move_default_branch <- function(
       )
     )
     cli_alert_success("Created issue {.field #{issue$number}}")
+    cli_alert_info("{.url {issue$html_url}}")
+  } else {
+    issue <- NULL
+    cli::cli_alert_warning("Issues are not enabled for {.field {repo}}, will not create an issue to announce branch change")
   }
-  cli_alert_info("{.url {issue$html_url}}")
   cli_alert_info("Cloning {repo}")
 
   withr::with_tempdir({
@@ -53,30 +62,34 @@ move_default_branch <- function(
     success <- FALSE
     tryCatch({
       usethis::git_default_branch_rename(to = new_default)
-      gh::gh(
-        "POST /repos/{repo}/issues/{number}/comments",
-        repo = repo,
-        number = issue$number,
-        body = jsonlite::unbox(
-          glue::glue(
-            issue_close,
-            repo = repo,
-            old_default = r$default_branch,
-            new_default = new_default
+      cli_alert_success("Moved to branch {.field {new_default}}")
+      success <- TRUE
+
+      if (!is.null(issue)) {
+        gh::gh(
+          "POST /repos/{repo}/issues/{number}/comments",
+          repo = repo,
+          number = issue$number,
+          body = jsonlite::unbox(
+            glue::glue(
+              issue_close,
+              repo = repo,
+              old_default = r$default_branch,
+              new_default = new_default
+            )
           )
         )
-      )
-      gh::gh(
-        "PATCH /repos/{repo}/issues/{number}",
-        repo = repo,
-        number = issue$number,
-        state = jsonlite::unbox("closed")
-      )
-      issue$state <- "closed"
-      cli_alert_success("Moved to branch {.field main} and closed issue #{issue$number}")
-      success <- TRUE
+        gh::gh(
+          "PATCH /repos/{repo}/issues/{number}",
+          repo = repo,
+          number = issue$number,
+          state = jsonlite::unbox("closed")
+        )
+        issue$state <- "closed"
+        cli_alert_success("Closed issue #{issue$number}")
+      }
     }, error = function(e) {
-      cli::cli_alert_danger("Could not move default branch to {.field main}")
+      cli::cli_alert_danger("Could not move default branch to {.field {new_default}}")
       cli::cli_text(e$message)
     })
 
@@ -84,6 +97,7 @@ move_default_branch <- function(
 
     list(
       success = success,
+      branch = if (success) new_default else r$default_branch,
       repo = r,
       issue = issue
     )
