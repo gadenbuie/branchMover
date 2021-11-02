@@ -25,6 +25,7 @@ Imports:
     reactable,
     rlang,
     shiny,
+    shinycssloaders,
     usethis (>= 2.1.2),
     withr
 Encoding: UTF-8
