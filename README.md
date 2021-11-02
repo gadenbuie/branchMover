@@ -21,9 +21,18 @@ devtools::install_github("gadenbuie/branchMover")
 
 The app uses the [usethis](https://usethis.r-lib.org) and
 [gh](https://gh.r-lib.org) packages. You need to configure gh with a
-Personal Access Token to be able to authenticate with the GitHub API:
-read more about [Managing Personal Access
-Tokens](https://gh.r-lib.org/articles/managing-personal-access-tokens.html)
+Personal Access Token to be able to authenticate with the GitHub API.
+Read more about setting up a PAT in one of these places:
+
+-   [Managing Git(Hub)
+    Credentials](https://usethis.r-lib.org/articles/articles/git-credentials.html)
+    *usethis article*
+-   [Personal access token for
+    HTTPS](https://happygitwithr.com/https-pat.html) *guidance form
+    [Happy Git and GitHub for the useR](https://happygitwithr.com)*
+-   [Managing Personal Access
+    Tokens](https://gh.r-lib.org/articles/managing-personal-access-tokens.html)
+    *gh article*
 
 Then, in RStudio, run the app with:
 
