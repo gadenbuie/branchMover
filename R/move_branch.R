@@ -11,12 +11,22 @@ move_default_branch <- function(
 
   if (identical(r$default_branch, new_default)) {
     cli::cli_alert_success("The default branch for {.field {repo}} is already {.value {new_default}}")
-    return(list(success = TRUE, repo = r, branch = r$default_branch))
+    return(list(
+      success = TRUE,
+      repo = r,
+      branch = r$default_branch,
+      message = glue::glue("The default branch for `{repo}` is already `{new_default}`")
+    ))
   }
 
   if (r$archived || r$disabled) {
     cli::cli_alert_info("{.field {repo}} is archived or disabled, cannot change default branch")
-    return(list(success = FALSE, repo = r, branch = r$default_branch))
+    return(list(
+      success = FALSE,
+      repo = r,
+      branch = r$default_branch,
+      message = glue::glue("`{repo}` is archived or disabled, cannot change default branch")
+    ))
   }
 
   if (!shiny::isTruthy(issue_number)) {

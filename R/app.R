@@ -30,6 +30,7 @@ ui <- function(req) {
           color = "#447099",
           color.background = "#CBD4DD"
         ),
+        use_toast(),
         shiny::tags$script(shiny::HTML(
           "function disableAllChangeButtons() {
             document
@@ -212,6 +213,30 @@ server <- function(user, ...) {
 
       if (!is.null(res$branch)) {
         repos[repos$full_name == res$repo$full_name, "default_branch"] <- res$branch
+      }
+
+      if (!is.null(res$message)) {
+        toastify(
+          title = res$repo$full_name,
+          body = res$message,
+          state = c("danger", "success")[res$success + 1]
+        )
+      } else if (res$success) {
+        toastify(
+          title = res$repo$full_name,
+          body = if (!identical(res$branch, res$repos$default_branch)) {
+            glue::glue("Default branch moved to `{res$branch}`")
+          } else {
+            glue::glue("Default branch remained the same: `{res$branch}`")
+          },
+          state = "success"
+        )
+      } else {
+        toastify(
+          title = res$repo$full_name,
+          body = "Could not change default branch",
+          state = "danger"
+        )
       }
 
       repos(repos %>% add_buttons())
