@@ -77,7 +77,12 @@ ui <- function(req) {
         class = "container-sm",
         shiny::p(
           "An issue with this body will be created when we start the branch change process.",
-          "If successful, we'll also close the issue with a comment."
+          "If successful, we'll also close the issue with a comment.",
+          "You can use", shiny::code("{repo}", .noWS = "after"), ",",
+          shiny::code("{old_default}", .noWS = "after"), ", and",
+          shiny::code("{new_default}", .noWS = "after"),
+          "in the text for the full repo name, old default branch name and",
+          "new default branch name, respectively."
         ),
         shiny::div(
           class = "row",
@@ -117,7 +122,7 @@ ui <- function(req) {
             shiny::uiOutput("issue_close_preview")
           ),
           shiny::tags$style(shiny::HTML(
-            "#issue_markdown, #issue_close_markdown { font-family: monospace }"
+            "#issue_markdown, #issue_close_markdown { font-family: monospace; font-size: 1rem; }"
           ))
         )
       )
@@ -133,7 +138,8 @@ ui <- function(req) {
           value = "main"
         )
       )
-    )
+    ),
+    about_page()
   )
 }
 
