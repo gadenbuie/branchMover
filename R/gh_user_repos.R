@@ -28,19 +28,25 @@ gh_user_repos <- function(username = NULL, include_fork = TRUE, include_private 
     filter_rows_if(!include_private, !.data$is_private) %>%
     dplyr::arrange(dplyr::desc(.data$count_stargazers))
 
-  issues <- gh_find_branch_mover_issues(username)
-  if (!is.null(issues)) {
-    repos_df <- dplyr::left_join(repos_df, issues, by = "full_name")
-  }
+  issues <- gh_find_branch_mover_issues(username) %>%
+    ui_report_branch_mover_issues()
+
+  repos_df <- dplyr::left_join(repos_df, issues, by = "full_name")
 
   repos_df %>%
     ui_report_default_branch_count()
 }
 
 gh_find_branch_mover_issues <- function(username) {
-  issues <- gh::gh("/search/issues", q = glue::glue("91e77a361e4e user:{username}"))
+  issues <- gh::gh("/search/issues", q = glue::glue("91e77a361e4e org:{username}"))
   if (!length(issues$items)) {
-    return(NULL)
+    return(dplyr::tibble(
+      full_name = character(0),
+      issue = integer(0),
+      state = character(0),
+      created_at = character(0),
+      issue_url = character(0)
+    ))
   }
 
   issues$items %>%
@@ -109,6 +115,26 @@ ui_report_default_branch_count <- function(repos_df) {
   ))
 
   repos_df
+}
+
+ui_report_branch_mover_issues <- function(x) {
+  if (is.null(x) || !nrow(x)) {
+    return(invisible(x))
+  }
+
+  n_issues <- nrow(x)
+  n_closed <- sum(x$state == "closed")
+  n_unresolved <- n_issues - n_closed
+
+  cli_alert_info("Found {.val {n_issues}} {.emph branch mover} issues:")
+  cli_bullets(
+    c(
+      "!" = if (n_unresolved > 0) "{.val {n_unresolved} are unresolved",
+      "v" = if (n_closed > 0) "{.val {n_closed}} are closed"
+    )
+  )
+
+  invisible(x)
 }
 
 gh_check_pages <- function(repo_spec) {
