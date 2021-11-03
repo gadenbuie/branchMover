@@ -57,7 +57,8 @@ ui <- function(req) {
           }
 
           $('#repos').on('click', '.js-change-branch', function(ev) {
-            Shiny.setInputValue('change_branch', ev.target.dataset.repo)
+            const {repo, action} = ev.target.dataset
+            Shiny.setInputValue('change_branch', {repo, action})
             addSpinner(ev.target)
           })
 
@@ -128,14 +129,22 @@ ui <- function(req) {
       )
     ),
     shiny::tabPanel(
-      title = "Branch Name",
+      title = "Settings",
       id = "settings",
       shiny::div(
         class = "container",
         shiny::textInput(
           "new_default",
-          "New Default Branch Name",
+          "New default branch name",
           value = "main"
+        ),
+        shiny::radioButtons(
+          "auto_close_issue",
+          "Should we automatically close issue when move is complete?",
+          choices = c("Yes" = "yes", "No, leave the issue open" = "no")
+        ),
+        shiny::helpText(
+          "If you leave the issue open, you can return to this app at a later time to finalize the change and close the issue."
         )
       )
     ),
@@ -189,13 +198,21 @@ server <- function(username, ...) {
     shiny::observeEvent(input$change_branch, {
       session$sendCustomMessage("set_change_branch_state", "disable")
 
-      cli::cli_process_start("Changing branch of repo: {input$change_branch}")
+      repo <- input$change_branch$repo
+
+      if (input$change_branch$action == "change") {
+        cli::cli_process_start("Changing branch of repo: {repo}")
+      } else {
+        cli::cli_process_start("Finalizing change of default branch in {repo}")
+      }
       res <- move_default_branch(
-        repo = input$change_branch,
+        repo = repo,
         new_default = input$new_default,
-        issue_number = repos()[["issue"]][repos()$full_name == input$change_branch],
+        issue_number = repos()[["issue"]][repos()$full_name == repo],
         issue_body = input$issue_markdown,
-        issue_close = input$issue_close_markdown
+        issue_close = input$issue_close_markdown,
+        auto_close_issue = identical(input$change_branch$action, "finalize") ||
+          identical(input$auto_close_issue, "yes")
       )
 
       cli::cli_process_done()

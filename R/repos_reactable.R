@@ -70,7 +70,8 @@ repos_reactable <- function(repos_df, include_buttons = FALSE) {
             return ""
           }
           const buttonText = hasIssue && isDefault ? "Finalize Change" : "Change Default Branch"
-          return `<button data-repo="${cellInfo.row.full_name}" type="button" class="btn btn-primary btn-sm js-change-branch">${buttonText}</button>`
+          const action = hasIssue && isDefault ? "finalize" : "change"
+          return `<button data-action="${action}" data-repo="${cellInfo.row.full_name}" type="button" class="btn btn-primary btn-sm js-change-branch">${buttonText}</button>`
         }')
       ),
       issue = colDef(

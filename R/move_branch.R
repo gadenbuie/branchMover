@@ -5,7 +5,8 @@ move_default_branch <- function(
   issue_number = NULL,
   new_default = "main",
   issue_body = NULL,
-  issue_close = NULL
+  issue_close = NULL,
+  auto_close_issue = TRUE
 ) {
   r <- gh::gh("/repos/{repo}", repo = repo)
 
@@ -130,7 +131,7 @@ move_default_branch <- function(
   }
 
   # Close the issue on success ----
-  if (success) {
+  if (success && isTRUE(auto_close_issue)) {
     tryCatch({
       if (!is.null(issue)) {
         gh::gh(
