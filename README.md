@@ -42,6 +42,23 @@ branchMover::app()
 
 ![](man/figures/app.png)
 
+If you’d like to explore or reconfigure the default branch of
+repositories that you manage in other organizations, provide `app()`
+with the user or organization name. Branch Mover will tell you how many
+repos you have access to in the organization and it won’t let you update
+branch names for repos where you don’t have admin permissions.
+
+``` r
+branchMover::app("rstudio-education")
+#> ℹ @rstudio-education has 57 total repositories (including forks)
+#> • 57 public repos
+#> • 0 private repos
+#> ℹ 57 non-fork repositories have the following default branches:
+#> x master: 51 repos
+#> ✓ main: 6 repos
+#> ℹ You have admin rights on 1 repo
+```
+
 ## Notes
 
 branchMover changes the default branch on GitHub and creates an issue
