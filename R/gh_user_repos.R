@@ -140,7 +140,7 @@ ui_report_branch_mover_issues <- function(x) {
   cli_alert_info("Found {.val {n_issues}} {.emph branch mover} issue{?s}:")
   cli_bullets(
     c(
-      "!" = if (n_unresolved > 0) "{.val {n_unresolved} {?is/are} unresolved",
+      "!" = if (n_unresolved > 0) "{.val {n_unresolved}} {?is/are} unresolved",
       "v" = if (n_closed > 0) "{.val {n_closed}} {?is/are} closed"
     )
   )
