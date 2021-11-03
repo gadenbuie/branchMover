@@ -93,7 +93,8 @@ ui <- function(req) {
             shiny::textAreaInput(
               "issue_markdown",
               "Issue Body",
-              value = pkg_read_lines("templates", "issue-body.md"),
+              value = stored_preference("issue_markdown") %||%
+                pkg_read_lines("templates", "issue-body.md"),
               width = "100%",
               rows = 10
             ),
@@ -112,7 +113,8 @@ ui <- function(req) {
             shiny::textAreaInput(
               "issue_close_markdown",
               "Comment Body",
-              value = pkg_read_lines("templates", "issue-close.md"),
+              value = stored_preference("issue_close_markdown") %||%
+                pkg_read_lines("templates", "issue-close.md"),
               width = "100%",
               rows = 10
             )
@@ -161,6 +163,15 @@ server <- function(username, ...) {
 
     output$repos <- reactable::renderReactable({
       repos_reactable(shiny::isolate(repos()), include_buttons = TRUE)
+    })
+
+    # store issue text as an RStudio user preference
+    shiny::observeEvent(input$issue_markdown, ignoreInit = TRUE, {
+      stored_preference("issue_markdown", input$issue_markdown)
+    })
+
+    shiny::observeEvent(input$issue_close_markdown, ignoreInit = TRUE, {
+      stored_preference("issue_close_markdown", input$issue_close_markdown)
     })
 
     output$issue_preview <- shiny::renderUI({
@@ -268,4 +279,28 @@ server <- function(username, ...) {
       reactable::updateReactable("repos", repos, page = rct_state$page)
     })
   }
+}
+
+
+stored_preference <- function(name, value = NULL) {
+  name <- paste0("branchMover.", name)
+
+  if (is.null(value)) {
+    if (!rstudioapi::hasFun("readPreference")) {
+      return(NULL)
+    }
+    pref <- rstudioapi::readPreference(name, "")
+    return(if (nzchar(pref)) pref)
+  }
+
+  if (!rstudioapi::hasFun("writePreference")) {
+    return(NULL)
+  }
+
+  rstudioapi::writePreference(name, value)
+}
+
+stored_preference_clear <- function() {
+  rstudioapi::writePreference("branchMover.issue_markdown", "")
+  rstudioapi::writePreference("branchMover.issue_close_markdown", "")
 }

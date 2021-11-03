@@ -27,6 +27,7 @@ Imports:
     purrr,
     reactable,
     rlang,
+    rstudioapi,
     shiny,
     shinycssloaders,
     withr
