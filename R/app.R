@@ -1,7 +1,7 @@
 
 #' @export
-app <- function(user = NULL, ...) {
-  shiny::shinyApp(ui(), server(user, ...))
+app <- function(username = NULL, ...) {
+  shiny::shinyApp(ui(), server(username, ...))
 }
 
 
@@ -143,15 +143,15 @@ ui <- function(req) {
   )
 }
 
-server <- function(user, ...) {
+server <- function(username, ...) {
   function(input, output, session) {
-    repos <- gh_user_repos(user, ...)
+    repos <- gh_user_repos(username, ...)
     repo_ex <- repos[1, ]
 
     repos <- shiny::reactiveVal(repos)
 
     output$repos <- reactable::renderReactable({
-      repos_reactable(isolate(repos()), include_buttons = TRUE)
+      repos_reactable(shiny::isolate(repos()), include_buttons = TRUE)
     })
 
     output$issue_preview <- shiny::renderUI({
@@ -207,7 +207,7 @@ server <- function(user, ...) {
       res <- rv_update()
       shiny::req(res)
 
-      repos <- isolate(repos())
+      repos <- shiny::isolate(repos())
 
       if (!is.null(res$issue)) {
         issue <- res$issue[c("number", "html_url", "state", "created_at")]
@@ -246,7 +246,7 @@ server <- function(user, ...) {
       }
 
       repos(repos %>% add_buttons())
-      rct_state <- isolate(reactable::getReactableState("repos"))
+      rct_state <- shiny::isolate(reactable::getReactableState("repos"))
       reactable::updateReactable("repos", repos, page = rct_state$page)
     })
   }
