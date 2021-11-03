@@ -136,10 +136,17 @@ server <- function(username, ...) {
           state = c("danger", "success")[res$success + 1]
         )
       } else if (res$success) {
+        is_finalized <- is.null(res$issue) || identical(res$issue$state, "closed")
+        was_updated <- !identical(res$branch, res$repo$default_branch)
+
         toastify(
           title = res$repo$full_name,
-          body = if (!identical(res$branch, res$repos$default_branch)) {
+          body = if (is_finalized && !was_updated) {
+            glue::glue("Default branch change to `{res$branch}` was finalized")
+          } else if (was_updated && is_finalized) {
             glue::glue("Default branch moved to `{res$branch}`")
+          } else if (was_updated && !is_finalized) {
+            glue::glue("Default branch moved to `{res$branch}` but [issue #{res$issue$number}]({res$issue$html_url}) remains open")
           } else {
             glue::glue("Default branch remained the same: `{res$branch}`")
           },
