@@ -1,7 +1,7 @@
 
 #' @export
-app <- function(user = NULL, ...) {
-  shiny::shinyApp(ui(), server(user, ...))
+app <- function(username = NULL, ...) {
+  shiny::shinyApp(ui(), server(username, ...))
 }
 
 
@@ -143,9 +143,9 @@ ui <- function(req) {
   )
 }
 
-server <- function(user, ...) {
+server <- function(username, ...) {
   function(input, output, session) {
-    repos <- gh_user_repos(user, ...)
+    repos <- gh_user_repos(username, ...)
     repo_ex <- repos[1, ]
 
     repos <- shiny::reactiveVal(repos)
