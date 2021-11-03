@@ -15,6 +15,8 @@ repos_reactable <- function(repos_df, include_buttons = FALSE) {
     repos_df <- add_buttons(repos_df)
   }
 
+  repos_df$can_admin <- ifelse(repos_df$can_admin, "Yes", "No")
+
   reactable(
     repos_df,
     searchable = TRUE,
@@ -52,14 +54,20 @@ repos_reactable <- function(repos_df, include_buttons = FALSE) {
       is_private = colDef(show = FALSE),
       count_forks = colDef("Forks", filterable = FALSE),
       count_stargazers = colDef("Stars", filterable = FALSE),
+      can_admin = colDef("Admin?", align = "center"),
       url_html = colDef(show = FALSE),
       url_ssh = colDef(show = FALSE),
       button = colDef(
         name = "", html = TRUE, filterable = FALSE, minWidth = 120,
         cell = reactable::JS('function(cellInfo) {
-          return cellInfo.row.default_branch === (window.branchMoverNewDefaultBranch || "main")
-            ? ""
-            : `<button data-repo="${cellInfo.row.full_name}" type="button" class="btn btn-primary btn-sm js-change-branch">Change Default Branch</button>`
+          if (cellInfo.row.can_admin !== "Yes") {
+            return `<span class="text-info">Cannot admin</span>`
+          }
+          const isDefault = cellInfo.row.default_branch === (window.branchMoverNewDefaultBranch || "main")
+          if (isDefault) {
+            return ""
+          }
+          return `<button data-repo="${cellInfo.row.full_name}" type="button" class="btn btn-primary btn-sm js-change-branch">Change Default Branch</button>`
         }')
       ),
       issue = colDef(
