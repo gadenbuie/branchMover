@@ -115,7 +115,7 @@ page_settings <- function() {
       "auto_close_issue",
       "Should we automatically close issue when move is complete?",
       choices = c("Yes" = "yes", "No, leave the issue open" = "no"),
-      selected = stored_preference("auto_close_issue") %||% "yes"
+      selected = stored_preference("auto_close_issue") %||% "no"
     ),
     shiny::helpText(
       "If you leave the issue open, you can return to this app at a later time to finalize the change and close the issue."
