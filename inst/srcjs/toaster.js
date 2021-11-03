@@ -11,7 +11,7 @@ $(document).ready(function() {
     toast.setAttribute("aria-live", "assertive")
     toast.setAttribute("aria-atomic", "true")
     toast.setAttribute("data-bs-animation", "true")
-    toast.setAttribute("data-bs-autohide", "false")
+    toast.setAttribute("data-bs-autohide", "true")
     toast.setAttribute("data-bs-delay", "5000")
 
     toast.innerHTML = `<div class="toast-header">
