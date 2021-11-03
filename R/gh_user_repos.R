@@ -87,7 +87,7 @@ ui_report_default_branch_count <- function(repos_df) {
   repos_default_branch_count <-
     repos_df %>%
     dplyr::mutate(
-      default_branch = forcats::fct_expand(default_branch, "main", "master"),
+      default_branch = forcats::fct_expand(.data$default_branch, "main", "master"),
       default_branch = forcats::fct_collapse(
         .data$default_branch,
         master = "master",
@@ -99,8 +99,8 @@ ui_report_default_branch_count <- function(repos_df) {
 
   rdbc <-
     repos_default_branch_count %>%
-    split(.$default_branch) %>%
-    purrr::keep(~ nrow(.x) > 0)
+    split(repos_default_branch_count$default_branch) %>%
+    purrr::keep(function(x) nrow(x) > 0)
 
   cli_alert_info(
     "{sum(repos_default_branch_count$n)} non-fork repositories have the following default branches:"

@@ -151,7 +151,7 @@ server <- function(username, ...) {
     repos <- shiny::reactiveVal(repos)
 
     output$repos <- reactable::renderReactable({
-      repos_reactable(isolate(repos()), include_buttons = TRUE)
+      repos_reactable(shiny::isolate(repos()), include_buttons = TRUE)
     })
 
     output$issue_preview <- shiny::renderUI({
@@ -207,7 +207,7 @@ server <- function(username, ...) {
       res <- rv_update()
       shiny::req(res)
 
-      repos <- isolate(repos())
+      repos <- shiny::isolate(repos())
 
       if (!is.null(res$issue)) {
         issue <- res$issue[c("number", "html_url", "state", "created_at")]
@@ -246,7 +246,7 @@ server <- function(username, ...) {
       }
 
       repos(repos %>% add_buttons())
-      rct_state <- isolate(reactable::getReactableState("repos"))
+      rct_state <- shiny::isolate(reactable::getReactableState("repos"))
       reactable::updateReactable("repos", repos, page = rct_state$page)
     })
   }
