@@ -80,11 +80,11 @@ ui_report_total_user_repos <- function(user) {
   total_repos <- (user$public_repos %||% 0) + (user$owned_private_repos %||% 0)
 
   cli_alert_info(
-    "{.field @{user$login}} has {.strong {total_repos}} total repositories (including forks)"
+    "{.field @{user$login}} has {.strong {total_repos}} total repositor{?y/ies} (including forks)"
   )
   cli_bullets(c(
-    "*" = "{.strong {user$public_repos}} public repos",
-    "*" = "{.strong {user$owned_private_repos %||% 0}} private repos"
+    "*" = "{.strong {user$public_repos}} public repo{?s}",
+    "*" = "{.strong {user$owned_private_repos %||% 0}} private rep{?s}"
   ))
 
   user
@@ -110,15 +110,15 @@ ui_report_default_branch_count <- function(repos_df) {
     purrr::keep(function(x) nrow(x) > 0)
 
   cli_alert_info(
-    "{sum(repos_default_branch_count$n)} non-fork repositories have the following default branches:"
+    "{sum(repos_default_branch_count$n)} non-fork repositor{?y/ies} {?has/have} the following default branch{?es}:"
   )
   cli_bullets(c(
     "x" = if ("master" %in% names(rdbc))
-      "{.field master}: {rdbc$master$n} repos",
+      "{.field master}: {rdbc$master$n} repo{?s}",
     "v" = if ("main" %in% names(rdbc))
-      "{.field main}: {rdbc$main$n %||% 0} repos",
+      "{.field main}: {rdbc$main$n %||% 0} repo{?s}",
     "!" = if ("other" %in% names(rdbc))
-      "{.field something else}: {rdbc$other$n} repos"
+      "{.field something else}: {rdbc$other$n} repo{?s}"
   ))
 
   cli_alert_info(
@@ -137,11 +137,11 @@ ui_report_branch_mover_issues <- function(x) {
   n_closed <- sum(x$state == "closed")
   n_unresolved <- n_issues - n_closed
 
-  cli_alert_info("Found {.val {n_issues}} {.emph branch mover} issues:")
+  cli_alert_info("Found {.val {n_issues}} {.emph branch mover} issue{?s}:")
   cli_bullets(
     c(
-      "!" = if (n_unresolved > 0) "{.val {n_unresolved} are unresolved",
-      "v" = if (n_closed > 0) "{.val {n_closed}} are closed"
+      "!" = if (n_unresolved > 0) "{.val {n_unresolved} {?is/are} unresolved",
+      "v" = if (n_closed > 0) "{.val {n_closed}} {?is/are} closed"
     )
   )
 
