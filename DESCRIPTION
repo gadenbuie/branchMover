@@ -5,7 +5,8 @@ Version: 0.0.0.9000
 Authors@R: 
     person("Garrick", "Aden-Buie", , "garrick@adenbuie.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7111-0077"))
-Description: What the package does (one paragraph).
+Description: Helper app to move the default branch of GitHub repositories
+    under your control.
 License: MIT + file LICENSE
 URL: https://github.com/gadenbuie/branchMover
 BugReports: https://github.com/gadenbuie/branchMover/issues
@@ -28,7 +29,6 @@ Imports:
     rlang,
     shiny,
     shinycssloaders,
-    usethis (>= 2.1.2),
     withr
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
