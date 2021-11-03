@@ -6,7 +6,7 @@
 \alias{branchMover-package}
 \title{branchMover: An RStudio Addin to Help Move the Default Branch of Your GitHub Repos}
 \description{
-What the package does (one paragraph).
+Helper app to move the default branch of GitHub repositories under your control.
 }
 \seealso{
 Useful links:
