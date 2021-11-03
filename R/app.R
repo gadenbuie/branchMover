@@ -247,6 +247,7 @@ server <- function(username, ...) {
 
       repos(repos %>% add_buttons())
       rct_state <- shiny::isolate(reactable::getReactableState("repos"))
+      repos$can_admin <- ifelse(repos$can_admin == TRUE | repos$can_admin == "Yes", "Yes", "No")
       reactable::updateReactable("repos", repos, page = rct_state$page)
     })
   }

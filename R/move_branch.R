@@ -9,16 +9,6 @@ move_default_branch <- function(
 ) {
   r <- gh::gh("/repos/{repo}", repo = repo)
 
-  if (identical(r$default_branch, new_default)) {
-    cli::cli_alert_success("The default branch for {.field {repo}} is already {.value {new_default}}")
-    return(list(
-      success = TRUE,
-      repo = r,
-      branch = r$default_branch,
-      message = glue::glue("The default branch for `{repo}` is already `{new_default}`")
-    ))
-  }
-
   if (r$archived || r$disabled) {
     cli::cli_alert_info("{.field {repo}} is archived or disabled, cannot change default branch")
     return(list(
@@ -59,66 +49,88 @@ move_default_branch <- function(
     issue <- NULL
     cli::cli_alert_warning("Issues are not enabled for {.field {repo}}, will not create an issue to announce branch change")
   }
-  cli_alert_info("Cloning {repo}")
 
-  withr::with_tempdir({
-    path <- gert::git_clone(r$ssh_url)
-    setwd(path)
+  is_finalized <- is.null(issue) || identical(issue$state, "closed")
 
-    old_proj <- usethis::proj_set(path)
+  if (identical(r$default_branch, new_default) && is_finalized) {
+    cli::cli_alert_success("The default branch for {.field {repo}} is already {.value {new_default}}")
+    return(list(
+      success = TRUE,
+      repo = r,
+      branch = r$default_branch,
+      issue = issue,
+      message = glue::glue("The default branch for `{repo}` is already `{new_default}`")
+    ))
+  }
 
-    issue_close <- issue_close %||% pkg_read_lines("templates", "issue-close.md")
+  issue_close <- issue_close %||% pkg_read_lines("templates", "issue-close.md")
 
+  # Move default branch ----
+  if (!identical(r$default_branch, new_default)) {
     success <- FALSE
     tryCatch({
-      usethis::git_default_branch_rename(to = new_default)
+      gh::gh(
+        "POST /repos/{repo}/branches/{from}/rename",
+        repo = repo,
+        from = r$default_branch,
+        new_name = new_default
+      )
       cli_alert_success("Moved to branch {.field {new_default}}")
       success <- TRUE
     }, error = function(err) {
       cli::cli_alert_danger("Could not move default branch to {.field {new_default}}")
       cli::cli_text(err$message)
     })
+  } else {
+    success <- TRUE
+    cli_alert_success("The default branch of {.field {repo}} is already {.strong {new_default}}")
+  }
 
-    pages <- gh_check_pages(r)
-    if (pages$has_default_branch_pages) {
-      cli::cli_alert_warning("Detected that {.field {repo}} has GitHub Pages served from the current default branch")
-      success_pages_branch <- FALSE
+  # Check in on GitHub Pages ----
+  # This seems to be handled automatically by the GitHub branch rename,
+  # but on a few of my repos the change wasn't made so I added this check
+  pages <- gh_check_pages(r)
+  if (!is.null(pages) && pages$has_default_branch_pages) {
+    cli::cli_alert_warning("Detected that {.field {repo}} has GitHub Pages served from the current default branch")
+    success_pages_branch <- FALSE
+    tryCatch({
+      pages$source$branch <- new_default
+      gh::gh(
+        "PUT /repos/{repo}/pages",
+        source = pages$source
+      )
+      success_pages_branch <- TRUE
+      cli::cli_alert_success("GitHub Pages are now served from {.field {new_default}}")
+    }, error = function(err) {
+      cli::cli_alert_danger("Could not move pages branch to {.field {new_default}}")
+      cli::cli_text(err$message)
+    })
+
+    if (!is.null(issue)) {
       tryCatch({
-        pages$source$branch <- new_default
         gh::gh(
-          "PUT /repos/{repo}/pages",
-          source = pages$source
-        )
-        success_pages_branch <- TRUE
-        cli::cli_alert_success("GitHub Pages are now served from {.field {new_default}}")
-      }, error = function(err) {
-        cli::cli_alert_danger("Could not move pages branch to {.field {new_default}}")
-        cli::cli_text(err$message)
-      })
-
-      if (!is.null(issue)) {
-        tryCatch({
-          gh::gh(
-            "POST /repos/{repo}/issues/{number}/comments",
-            repo = repo,
-            number = issue$number,
-            body = jsonlite::unbox(
-              pkg_read_lines(
-                "templates", "issue-pages.md",
-                repo = repo,
-                old_default = r$default_branch,
-                new_default = new_default,
-                action = if (success_pages_branch) "updated" else "was not able to update"
-              )
+          "POST /repos/{repo}/issues/{number}/comments",
+          repo = repo,
+          number = issue$number,
+          body = jsonlite::unbox(
+            pkg_read_lines(
+              "templates", "issue-pages.md",
+              repo = repo,
+              old_default = r$default_branch,
+              new_default = new_default,
+              action = if (success_pages_branch) "updated" else "was not able to update"
             )
           )
-        }, error = function(err) {
-          cli::cli_alert_danger("Could not add comment about GitHub pages to issue #{issue$number}")
-          cli::cli_text(err$message)
-        })
-      }
+        )
+      }, error = function(err) {
+        cli::cli_alert_danger("Could not add comment about GitHub pages to issue #{issue$number}")
+        cli::cli_text(err$message)
+      })
     }
+  }
 
+  # Close the issue on success ----
+  if (success) {
     tryCatch({
       if (!is.null(issue)) {
         gh::gh(
@@ -147,14 +159,12 @@ move_default_branch <- function(
       cli::cli_alert_danger("Could not close issue #{issue$number}")
       cli::cli_text(err$message)
     })
+  }
 
-    usethis::proj_set(old_proj)
-
-    list(
-      success = success,
-      branch = if (success) new_default else r$default_branch,
-      repo = r,
-      issue = issue
-    )
-  })
+  list(
+    success = success,
+    branch = if (success) new_default else r$default_branch,
+    repo = r,
+    issue = issue
+  )
 }
