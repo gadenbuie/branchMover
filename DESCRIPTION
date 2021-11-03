@@ -17,7 +17,6 @@ Imports:
     commonmark,
     dplyr,
     forcats,
-    gert,
     gh,
     glue,
     htmltools,
