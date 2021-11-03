@@ -22,11 +22,18 @@ gh_user_repos <- function(username = NULL, include_fork = TRUE, include_private 
   repos_df <-
     repos %>%
     purrr::map_dfr(`[`, repo_fields) %>%
-    dplyr::mutate(.repo = repos) %>%
+    dplyr::mutate(
+      can_admin = purrr::map_lgl(repos, c("permissions", "admin"), .default = FALSE),
+      .repo = repos
+    ) %>%
     dplyr::rename(!!!repo_fields) %>%
     filter_rows_if(!include_fork, !.data$is_fork) %>%
     filter_rows_if(!include_private, !.data$is_private) %>%
-    dplyr::arrange(dplyr::desc(.data$count_stargazers))
+    dplyr::arrange(
+      dplyr::desc(.data$can_admin),
+      dplyr::desc(.data$count_forks + .data$count_stargazers)
+    ) %>%
+    dplyr::select(dplyr::all_of(names(repo_fields)), dplyr::everything())
 
   issues <- gh_find_branch_mover_issues(username) %>%
     ui_report_branch_mover_issues()
@@ -70,7 +77,7 @@ filter_rows_if <- function(df, cond, expr) {
 }
 
 ui_report_total_user_repos <- function(user) {
-  total_repos <- user$public_repos + user$owned_private_repos
+  total_repos <- (user$public_repos %||% 0) + (user$owned_private_repos %||% 0)
 
   cli_alert_info(
     "{.field @{user$login}} has {.strong {total_repos}} total repositories (including forks)"
@@ -113,6 +120,10 @@ ui_report_default_branch_count <- function(repos_df) {
     "!" = if ("other" %in% names(rdbc))
       "{.field something else}: {rdbc$other$n} repos"
   ))
+
+  cli_alert_info(
+    "You have admin rights on {.strong {sum(repos_df$can_admin)}} repo{?s}"
+  )
 
   repos_df
 }
