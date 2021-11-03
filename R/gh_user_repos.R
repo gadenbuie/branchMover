@@ -5,7 +5,7 @@ gh_user_repos <- function(username = NULL, include_fork = TRUE, include_private 
   user <- gh::gh("/users/{username}", username = username) %>%
     ui_report_total_user_repos()
 
-  repos <- gh::gh("/user/repos", .limit = Inf, type = "owner")
+  repos <- gh::gh("/users/{username}/repos", .limit = Inf, type = "owner", username = username)
 
   repo_fields <- c(
     full_name = "full_name",
@@ -71,7 +71,7 @@ ui_report_total_user_repos <- function(user) {
   )
   cli_bullets(c(
     "*" = "{.strong {user$public_repos}} public repos",
-    "*" = "{.strong {user$owned_private_repos}} private repos"
+    "*" = "{.strong {user$owned_private_repos %||% 0}} private repos"
   ))
 
   user
@@ -81,6 +81,7 @@ ui_report_default_branch_count <- function(repos_df) {
   repos_default_branch_count <-
     repos_df %>%
     dplyr::mutate(
+      default_branch = forcats::fct_expand(default_branch, "main", "master"),
       default_branch = forcats::fct_collapse(
         .data$default_branch,
         master = "master",
@@ -90,7 +91,10 @@ ui_report_default_branch_count <- function(repos_df) {
     ) %>%
     dplyr::count(.data$default_branch, sort = TRUE)
 
-  rdbc <- repos_default_branch_count %>% split(.$default_branch)
+  rdbc <-
+    repos_default_branch_count %>%
+    split(.$default_branch) %>%
+    purrr::keep(~ nrow(.x) > 0)
 
   cli_alert_info(
     "{sum(repos_default_branch_count$n)} non-fork repositories have the following default branches:"
@@ -99,7 +103,7 @@ ui_report_default_branch_count <- function(repos_df) {
     "x" = if ("master" %in% names(rdbc))
       "{.field master}: {rdbc$master$n} repos",
     "v" = if ("main" %in% names(rdbc))
-      "{.field main}: {rdbc$main$n} repos",
+      "{.field main}: {rdbc$main$n %||% 0} repos",
     "!" = if ("other" %in% names(rdbc))
       "{.field something else}: {rdbc$other$n} repos"
   ))
