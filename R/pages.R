@@ -109,12 +109,13 @@ page_settings <- function() {
     shiny::textInput(
       "new_default",
       "New default branch name",
-      value = "main"
+      value = stored_preference("new_default") %||% "main"
     ),
     shiny::radioButtons(
       "auto_close_issue",
       "Should we automatically close issue when move is complete?",
-      choices = c("Yes" = "yes", "No, leave the issue open" = "no")
+      choices = c("Yes" = "yes", "No, leave the issue open" = "no"),
+      selected = stored_preference("auto_close_issue") %||% "yes"
     ),
     shiny::helpText(
       "If you leave the issue open, you can return to this app at a later time to finalize the change and close the issue."

@@ -46,6 +46,14 @@ server <- function(username, ...) {
       stored_preference("issue_close_markdown", input$issue_close_markdown)
     })
 
+    shiny::observeEvent(input$new_default, ignoreInit = TRUE, {
+      stored_preference("new_default", input$new_default)
+    })
+
+    shiny::observeEvent(input$auto_close_issue, ignoreInit = TRUE, {
+      stored_preference("auto_close_issue", input$auto_close_issue)
+    })
+
     output$issue_preview <- shiny::renderUI({
       html <- commonmark::markdown_html(
         glue::glue(
@@ -174,5 +182,6 @@ stored_preference <- function(name, value = NULL) {
 
 stored_preference_clear <- function() {
   rstudioapi::writePreference("branchMover.issue_markdown", "")
+  rstudioapi::writePreference("branchMover.issue_close_markdown", "")
   rstudioapi::writePreference("branchMover.issue_close_markdown", "")
 }
