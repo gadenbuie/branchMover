@@ -19,127 +19,10 @@ ui <- function(req) {
       "font-size-base" = "1rem"
     ),
     collapsible = TRUE,
-    shiny::tabPanel(
-      title = "Repos",
-      id = "repos",
-      shiny::div(
-        class = "container-sm",
-        shinycssloaders::withSpinner(
-          reactable::reactableOutput("repos"),
-          type = 8,
-          color = "#447099",
-          color.background = "#CBD4DD"
-        ),
-        use_toast(),
-        shiny::tags$script(shiny::HTML(
-          "function disableAllChangeButtons() {
-            document
-              .querySelectorAll('.js-change-branch')
-              .forEach(function(el) {
-                el.setAttribute('disabled', true)
-                el.classList.add('btn-disabled')
-              })
-          }
-
-          function enableAllChangeButtons() {
-            document
-              .querySelectorAll('.js-change-branch')
-              .forEach(function(el) {
-                el.innerHTML = 'Change Default Branch'
-                el.removeAttribute('disabled')
-                el.classList.remove('btn-disabled')
-              })
-          }
-
-          function addSpinner(el) {
-            el.innerHTML = '<span class=\"spinner-border spinner-border-sm\"' +
-              'role=\"status\" aria-hidden=\"true\"></span> Changing Branch'
-          }
-
-          $('#repos').on('click', '.js-change-branch', function(ev) {
-            Shiny.setInputValue('change_branch', ev.target.dataset.repo)
-            addSpinner(ev.target)
-          })
-
-          $(document).on('change', '#new_default', function(ev) {
-            window.branchMoverNewDefaultBranch = ev.target.value
-          })
-
-          Shiny.addCustomMessageHandler('set_change_branch_state', function(x) {
-            x === 'disable' ? disableAllChangeButtons() : enableAllChangeButtons()
-          })"
-        ))
-      )
-    ),
-    shiny::tabPanel(
-      title = "Issue Text",
-      shiny::div(
-        class = "container-sm",
-        shiny::p(
-          "An issue with this body will be created when we start the branch change process.",
-          "If successful, we'll also close the issue with a comment.",
-          "You can use", shiny::code("{repo}", .noWS = "after"), ",",
-          shiny::code("{old_default}", .noWS = "after"), ", and",
-          shiny::code("{new_default}", .noWS = "after"),
-          "in the text for the full repo name, old default branch name and",
-          "new default branch name, respectively."
-        ),
-        shiny::div(
-          class = "row",
-          shiny::h3("Issue text announcing the branch change"),
-          shiny::div(
-            class = "col-md-6",
-            shiny::textAreaInput(
-              "issue_markdown",
-              "Issue Body",
-              value = pkg_read_lines("templates", "issue-body.md"),
-              width = "100%",
-              rows = 10
-            ),
-          ),
-          shiny::div(
-            class = "col-md-6",
-            shiny::p("Preview"),
-            shiny::uiOutput("issue_preview")
-          )
-        ),
-        shiny::div(
-          class = "row",
-          shiny::h3("Issue comment announcing the branch change was completed"),
-          shiny::div(
-            class = "col-md-6",
-            shiny::textAreaInput(
-              "issue_close_markdown",
-              "Comment Body",
-              value = pkg_read_lines("templates", "issue-close.md"),
-              width = "100%",
-              rows = 10
-            )
-          ),
-          shiny::div(
-            class = "col-md-6",
-            shiny::p("Preview"),
-            shiny::uiOutput("issue_close_preview")
-          ),
-          shiny::tags$style(shiny::HTML(
-            "#issue_markdown, #issue_close_markdown { font-family: monospace; font-size: 1rem; }"
-          ))
-        )
-      )
-    ),
-    shiny::tabPanel(
-      title = "Branch Name",
-      id = "settings",
-      shiny::div(
-        class = "container",
-        shiny::textInput(
-          "new_default",
-          "New Default Branch Name",
-          value = "main"
-        )
-      )
-    ),
-    about_page()
+    page_repos(),
+    page_issues(),
+    page_settings(),
+    page_about()
   )
 }
 
@@ -152,6 +35,23 @@ server <- function(username, ...) {
 
     output$repos <- reactable::renderReactable({
       repos_reactable(shiny::isolate(repos()), include_buttons = TRUE)
+    })
+
+    # store issue text as an RStudio user preference
+    shiny::observeEvent(input$issue_markdown, ignoreInit = TRUE, {
+      stored_preference("issue_markdown", input$issue_markdown)
+    })
+
+    shiny::observeEvent(input$issue_close_markdown, ignoreInit = TRUE, {
+      stored_preference("issue_close_markdown", input$issue_close_markdown)
+    })
+
+    shiny::observeEvent(input$new_default, ignoreInit = TRUE, {
+      stored_preference("new_default", input$new_default)
+    })
+
+    shiny::observeEvent(input$auto_close_issue, ignoreInit = TRUE, {
+      stored_preference("auto_close_issue", input$auto_close_issue)
     })
 
     output$issue_preview <- shiny::renderUI({
@@ -189,13 +89,21 @@ server <- function(username, ...) {
     shiny::observeEvent(input$change_branch, {
       session$sendCustomMessage("set_change_branch_state", "disable")
 
-      cli::cli_process_start("Changing branch of repo: {input$change_branch}")
+      repo <- input$change_branch$repo
+
+      if (input$change_branch$action == "change") {
+        cli::cli_process_start("Changing branch of repo: {repo}")
+      } else {
+        cli::cli_process_start("Finalizing change of default branch in {repo}")
+      }
       res <- move_default_branch(
-        repo = input$change_branch,
+        repo = repo,
         new_default = input$new_default,
-        issue_number = repos()[["issue"]][repos()$full_name == input$change_branch],
+        issue_number = repos()[["issue"]][repos()$full_name == repo],
         issue_body = input$issue_markdown,
-        issue_close = input$issue_close_markdown
+        issue_close = input$issue_close_markdown,
+        auto_close_issue = identical(input$change_branch$action, "finalize") ||
+          identical(input$auto_close_issue, "yes")
       )
 
       cli::cli_process_done()
@@ -228,10 +136,17 @@ server <- function(username, ...) {
           state = c("danger", "success")[res$success + 1]
         )
       } else if (res$success) {
+        is_finalized <- is.null(res$issue) || identical(res$issue$state, "closed")
+        was_updated <- !identical(res$branch, res$repo$default_branch)
+
         toastify(
           title = res$repo$full_name,
-          body = if (!identical(res$branch, res$repos$default_branch)) {
+          body = if (is_finalized && !was_updated) {
+            glue::glue("Default branch change to `{res$branch}` was finalized")
+          } else if (was_updated && is_finalized) {
             glue::glue("Default branch moved to `{res$branch}`")
+          } else if (was_updated && !is_finalized) {
+            glue::glue("Default branch moved to `{res$branch}` but [issue #{res$issue$number}]({res$issue$html_url}) remains open")
           } else {
             glue::glue("Default branch remained the same: `{res$branch}`")
           },
@@ -247,7 +162,33 @@ server <- function(username, ...) {
 
       repos(repos %>% add_buttons())
       rct_state <- shiny::isolate(reactable::getReactableState("repos"))
+      repos$can_admin <- ifelse(repos$can_admin == TRUE | repos$can_admin == "Yes", "Yes", "No")
       reactable::updateReactable("repos", repos, page = rct_state$page)
     })
   }
+}
+
+
+stored_preference <- function(name, value = NULL) {
+  name <- paste0("branchMover.", name)
+
+  if (is.null(value)) {
+    if (!rstudioapi::hasFun("readPreference")) {
+      return(NULL)
+    }
+    pref <- rstudioapi::readPreference(name, "")
+    return(if (nzchar(pref)) pref)
+  }
+
+  if (!rstudioapi::hasFun("writePreference")) {
+    return(NULL)
+  }
+
+  rstudioapi::writePreference(name, value)
+}
+
+stored_preference_clear <- function() {
+  rstudioapi::writePreference("branchMover.issue_markdown", "")
+  rstudioapi::writePreference("branchMover.issue_close_markdown", "")
+  rstudioapi::writePreference("branchMover.issue_close_markdown", "")
 }
