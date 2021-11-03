@@ -193,7 +193,7 @@ server <- function(username, ...) {
       res <- move_default_branch(
         repo = input$change_branch,
         new_default = input$new_default,
-        issue_number = repos()[repos()$full_name == input$change_branch, "issue"],
+        issue_number = repos()[["issue"]][repos()$full_name == input$change_branch],
         issue_body = input$issue_markdown,
         issue_close = input$issue_close_markdown
       )
