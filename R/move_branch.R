@@ -103,6 +103,14 @@ move_default_branch <- function(
       )
       success_pages_branch <- TRUE
       cli::cli_alert_success("GitHub Pages are now served from {.field {new_default}}")
+
+      tryCatch({
+        gh::gh("POST /repos/{repo}/pages/builds", repo = repo)
+        cli::cli_alert_success("Requested a new GitHub pages build")
+      }, error = function(err) {
+        cli::cli_alert_danger("Unable to request new GitHub pages build")
+        cli::text(err$message)
+      })
     }, error = function(err) {
       cli::cli_alert_danger("Could not move pages branch to {.field {new_default}}")
       cli::cli_text(err$message)
