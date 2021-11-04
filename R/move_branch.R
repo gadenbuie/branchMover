@@ -98,6 +98,7 @@ move_default_branch <- function(
       pages$source$branch <- new_default
       gh::gh(
         "PUT /repos/{repo}/pages",
+        repo = repo,
         source = pages$source
       )
       success_pages_branch <- TRUE
@@ -116,10 +117,12 @@ move_default_branch <- function(
           body = jsonlite::unbox(
             pkg_read_lines(
               "templates", "issue-pages.md",
-              repo = repo,
-              old_default = r$default_branch,
-              new_default = new_default,
-              action = if (success_pages_branch) "updated" else "was not able to update"
+              values = list(
+                repo = repo,
+                old_default = r$default_branch,
+                new_default = new_default,
+                action = if (success_pages_branch) "updated" else "was not able to update"
+              )
             )
           )
         )
