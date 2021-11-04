@@ -109,7 +109,7 @@ move_default_branch <- function(
         cli::cli_alert_success("Requested a new GitHub pages build")
       }, error = function(err) {
         cli::cli_alert_danger("Unable to request new GitHub pages build")
-        cli::text(err$message)
+        cli::cli_text(err$message)
       })
     }, error = function(err) {
       cli::cli_alert_danger("Could not move pages branch to {.field {new_default}}")
