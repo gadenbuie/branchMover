@@ -1,7 +1,7 @@
 Package: branchMover
 Title: An RStudio Addin to Help Move the Default Branch of Your GitHub
     Repos
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person("Garrick", "Aden-Buie", , "garrick@adenbuie.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7111-0077"))
