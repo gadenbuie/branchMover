@@ -63,7 +63,7 @@ repos_reactable <- function(repos_df, include_buttons = FALSE) {
           if (cellInfo.row.can_admin !== "Yes") {
             return `<span class="text-info">Cannot admin</span>`
           }
-          const hasIssue = cellInfo.row.issue !== "NA" || cellInfo.row.issue === "" || cellInfo.row.issue === null
+          const hasIssue = !(cellInfo.row.issue === "NA" || cellInfo.row.issue === "" || cellInfo.row.issue === null)
           const isIssueClosed = cellInfo.row.state === "closed"
           const isDefault = cellInfo.row.default_branch === (window.branchMoverNewDefaultBranch || "main")
           if ((hasIssue && isIssueClosed && isDefault) || (!hasIssue && isDefault)) {
