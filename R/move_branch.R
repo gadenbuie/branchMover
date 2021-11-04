@@ -90,9 +90,9 @@ move_default_branch <- function(
   # Check in on GitHub Pages ----
   # This seems to be handled automatically by the GitHub branch rename,
   # but on a few of my repos the change wasn't made so I added this check
-  pages <- gh_check_pages(r)
-  if (!is.null(pages) && pages$has_default_branch_pages) {
-    cli::cli_alert_warning("Detected that {.field {repo}} has GitHub Pages served from the current default branch")
+  pages <- gh_repo_pages(r)
+  if (!is.null(pages) && identical(pages$source$branch, r$default_branch)) {
+    cli::cli_alert_warning("Detected that {.field {repo}} has GitHub Pages served from the old default branch")
     success_pages_branch <- FALSE
     tryCatch({
       pages$source$branch <- new_default

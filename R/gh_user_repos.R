@@ -148,7 +148,7 @@ ui_report_branch_mover_issues <- function(x) {
   invisible(x)
 }
 
-gh_check_pages <- function(repo_spec) {
+gh_repo_pages <- function(repo_spec) {
   repo <- if (is.character(repo_spec)) {
     gh::gh("/repos/{repo_spec}", repo_spec = repo_spec)
   } else {
@@ -161,8 +161,5 @@ gh_check_pages <- function(repo_spec) {
   }
 
   pages <- gh::gh("/repos/{repo_spec}/pages", repo_spec = repo$full_name)
-  list(
-    has_default_branch_pages = identical(pages$source$branch, repo$default_branch),
-    source = pages$source
-  )
+  pages
 }
