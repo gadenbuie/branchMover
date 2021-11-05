@@ -1,11 +1,23 @@
-gh_user_repos <- function(username = NULL, include_fork = TRUE, include_private = TRUE) {
+gh_user_repos <- function(username = NULL, include_fork = FALSE, include_private = TRUE) {
   checkmate::assert_character(username, max.len = 1, null.ok = TRUE)
-  username <- username %||% gh::gh_whoami()[["login"]]
+  username_authenticated <- gh::gh_whoami()[["login"]]
+  username <- username %||% username_authenticated
+  is_authenticated_user <- identical(username, username_authenticated)
 
-  user <- gh::gh("/users/{username}", username = username) %>%
+  gh::gh("/users/{username}", username = username) %>%
     ui_report_total_user_repos()
 
-  repos <- gh::gh("/users/{username}/repos", .limit = Inf, type = "owner", username = username)
+  if (!is_authenticated_user && include_private) {
+    cli_alert_danger("branchMover cannot list private repos for users other than the authenticated user ({.field @{username_authenticated}})")
+  }
+  ui_report_inclusions(include_fork, is_authenticated_user && include_private)
+
+  repos <-
+    if (is_authenticated_user) {
+      gh::gh("/user/repos", .limit = Inf, type = "owner")
+    } else {
+      gh::gh("/users/{username}/repos", .limit = Inf, type = "owner", username = username)
+    }
 
   repo_fields <- c(
     full_name = "full_name",
@@ -88,6 +100,18 @@ ui_report_total_user_repos <- function(user) {
   ))
 
   user
+}
+
+ui_report_inclusions <- function(forks, private) {
+  things <- c("{.strong forks}", "{.strong private repos}")
+  include <- things[c(forks, private)]
+  exclude <- things[!c(forks, private)]
+  if (length(include)) {
+    cli_alert_info(c("Will include ", glue::glue_collapse(include, sep = " and ")))
+  }
+  if (length(exclude)) {
+    cli_alert_info(c("Will exclude ", glue::glue_collapse(exclude, sep = " and ")))
+  }
 }
 
 ui_report_default_branch_count <- function(repos_df) {

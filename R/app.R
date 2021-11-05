@@ -1,7 +1,39 @@
-
+#' Run the Branch Mover App
+#'
+#' @details
+#' The Branch Mover app helps you move the default branches of your repositories
+#' on GitHub. For more details about how this works or why you'd want to use
+#' Branch Mover, please see the blog post:
+#' <https://www.garrickadenbuie.com/blog/branchmover/>
+#'
+#' The app uses the [usethis](https://usethis.r-lib.org/) and
+#' [gh](https://gh.r-lib.org/) packages. You need to configure gh with a
+#' [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) to be able to authenticate with the GitHub API. Read more about setting up a PAT in one of these places:
+#'
+#' - [Managing Git(Hub) Credentials](https://usethis.r-lib.org/articles/articles/git-credentials.html)
+#'   _usethis article_
+#' - [Personal access token for HTTPS](https://happygitwithr.com/https-pat.html)
+#'   _guidance from [Happy Git and GitHub for the useR](https://happygitwithr.com/)_
+#' - [Managing Personal Access Tokens](https://gh.r-lib.org/articles/managing-personal-access-tokens.html)
+#'   _gh article_
+#'
+#' @param username The user name or organization name whose repos you would like
+#'   to move. If the username is `NULL` or the same as the authenticated user,
+#'   you can use branchMover to change the default branch of private repos.
+#'   Otherwise, the GitHub API doesn't allow us to list private repos for
+#'   organizations (or, if they do, please let me know!).
+#' @param include_fork,include_private Should forks (default `FALSE`) or private
+#'   repos (default `TRUE`) be included?
+#'
+#' @return Runs a Shiny app. Your settings and preferences are remembered
+#'   between sessions using RStudio user preferences.
+#'
 #' @export
-app <- function(username = NULL, ...) {
-  shiny::shinyApp(ui(), server(username, ...))
+app <- function(username = NULL, include_fork = FALSE, include_private = TRUE) {
+  shiny::shinyApp(
+    ui(),
+    server(username, include_fork = include_fork, include_private = include_private)
+  )
 }
 
 
@@ -26,9 +58,9 @@ ui <- function(req) {
   )
 }
 
-server <- function(username, ...) {
+server <- function(username, include_fork = FALSE, include_private = TRUE) {
   function(input, output, session) {
-    repos <- gh_user_repos(username, ...)
+    repos <- gh_user_repos(username, include_fork = include_fork, include_private = include_private)
     repo_ex <- repos[1, ]
 
     repos <- shiny::reactiveVal(repos)
