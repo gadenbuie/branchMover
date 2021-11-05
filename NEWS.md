@@ -6,7 +6,7 @@
   authenticated user. In all cases, the console messages report which repos are
   included in the app (thanks @sellorm, #11).
   
-**Full Changelog**: https://github.com/gadenbuie/branchMover/commits/v0.1.1
+**Full Changelog**: https://github.com/gadenbuie/branchMover/commits/v0.1.2
 
 # branchMover 0.1.1
 
